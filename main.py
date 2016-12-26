@@ -8,19 +8,27 @@ import sys
 import argparse
 
 
-parser = argparse.ArgumentParser(description="Very Lightweight tcp proxy")
-parser.add_argument('localport', type=int, help="local tcp port")
-parser.add_argument('remotehost', help="remote hostname")
-parser.add_argument('remoteport', type=int, help="remote tcp port")
-parser.add_argument("-v", "--verbose", action='store_true', help="Be verbose")
-parser.add_argument("-d", "--debug", action='store_true', help="Be Debug")
-args = parser.parse_args()
+def get_args(argv=None):
+    parser = argparse.ArgumentParser(description="Very Lightweight tcp proxy")
+    parser.add_argument('localport', type=int, help="local tcp port")
+    parser.add_argument('remotehost', help="remote hostname")
+    parser.add_argument('remoteport', type=int, help="remote tcp port")
+    parser.add_argument("-v", "--verbose", action='store_true', help="Talks")
+    parser.add_argument("-d", "--debug", action='store_true', help="Debugs")
+    args = parser.parse_args()
+    return args
 
 
-# Changing the buffer_size and delay, we can improve the speed and bandwidth.
-buffer_size = 4096
-delay = 0.0001
-forward_to = (args.remotehost, args.remoteport)
+# Changing the buffer_size/delay can improve the speed or bandwidth
+# at the expense of breaking expected behavior
+args = get_args(None)
+settings = {
+    'buffer_size': 4096,
+    'delay': 0.0001,
+    'remotehost': args.remotehost,
+    'remoteport': args.remoteport,
+    'localport': args.localport
+}
 
 
 class TermColors:
@@ -64,7 +72,7 @@ class CTCProxy:
     def main_loop(self):
         self.input_list.append(self.server)
         while 1:
-            time.sleep(delay)
+            time.sleep(settings['delay'])
             ss = select.select
             inputready, outputready, exceptready = ss(self.input_list, [], [])
             for self.s in inputready:
@@ -72,7 +80,7 @@ class CTCProxy:
                     self.on_accept()
                     break
 
-                self.data = self.s.recv(buffer_size)
+                self.data = self.s.recv(settings['buffer_size'])
                 if len(self.data) == 0:
                     self.on_close()
                     break
@@ -80,7 +88,8 @@ class CTCProxy:
                     self.on_recv()
 
     def on_accept(self):
-        forward = Forward().start(forward_to[0], forward_to[1])
+        forward = Forward().start(
+            settings['remotehost'], settings['remoteport'])
         clientsock, clientaddr = self.server.accept()
         if forward:
             if args.verbose:
@@ -118,10 +127,10 @@ class CTCProxy:
 
 if __name__ == '__main__':
     print "::Hello from ctcproxy::"
-    print "> Will proxy to", args.remotehost, "port", args.remoteport
-    print "< From", "0.0.0.0", "port", args.localport
+    print "> Will proxy to", args.remotehost, "port", settings['remoteport']
+    print "< From", "0.0.0.0", "port", settings['localport']
     print "--"
-    server = CTCProxy('', args.localport)
+    server = CTCProxy('', settings['localport'])
     try:
         server.main_loop()
     except KeyboardInterrupt:
