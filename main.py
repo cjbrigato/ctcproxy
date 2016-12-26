@@ -25,6 +25,15 @@ class TermColors:
 
 TC = TermColors
 
+class CustomPrint:
+
+    def title():
+        print("             |")
+        print("  __| __|  __| __ \   __| _ \\ \  / |   |")
+        print("(    |   (    |   | |   (   |`  <  |   |")
+        print("\___|\__|\___| .__/ _|  \___/ _/\_\\__, |")
+        print("              _|                   ____/")
+        print()
 
 class Forward:
 
@@ -131,6 +140,7 @@ def get_args(argv=None):
         debug = True
     if args.verbose:
         verbose = True
+    print('[','Verbose:',verbose,'/', 'Debug:',debug,']')
     print(TC.OK, "To  ", TC.RST, " > ", args.remotehost,
           ":", args.remoteport, sep="")
     print(TC.INF, "From", TC.RST, " < ", "0.0.0.0",
@@ -139,11 +149,9 @@ def get_args(argv=None):
 
 
 def main():
-    print(":: Hello from ctcproxy ::")
+    CustomPrint.title()
     args = get_args(None)
     print("--")
-    print(debug)
-    print(verbose)
     proxy = CTCProxy('', args.localport, args.remotehost, args.remoteport)
     try:
         proxy.main_loop(8192, 0.000001)
