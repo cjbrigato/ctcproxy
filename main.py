@@ -1,44 +1,25 @@
 #!/usr/bin/python
 # coding=utf-8
 
+from __future__ import print_function
+
 import socket
 import select
 import time
 import sys
 import argparse
 
-
-def get_args(argv=None):
-    parser = argparse.ArgumentParser(description="Very Lightweight tcp proxy")
-    parser.add_argument('localport', type=int, help="local tcp port")
-    parser.add_argument('remotehost', help="remote hostname")
-    parser.add_argument('remoteport', type=int, help="remote tcp port")
-    parser.add_argument("-v", "--verbose", action='store_true', help="Talks")
-    parser.add_argument("-d", "--debug", action='store_true', help="Debugs")
-    args = parser.parse_args()
-    return args
-
-
-# Changing the buffer_size/delay can improve the speed or bandwidth
-# at the expense of breaking expected behavior
-args = get_args(None)
-settings = {
-    'buffer_size': 4096,
-    'delay': 0.0001,
-    'remotehost': args.remotehost,
-    'remoteport': args.remoteport,
-    'localport': args.localport
-}
-
+verbose = False
+debug = False
 
 class TermColors:
 
     HEAD = '\033[95m'
     OK = '\033[92m'
     WARN = '\033[93m'
-    INFO = '\033[93m'
+    INF = '\033[93m'
     FAIL = '\033[91m'
-    REST = '\033[0m'
+    RST = '\033[0m'
     BOLD = '\033[1m'
     UNDR = '\033[4m'
 
@@ -54,25 +35,34 @@ class Forward:
         try:
             self.forward.connect((host, port))
             return self.forward
-        except Exception, e:
-            print e
+        except Exception as e:
+            print(e)
             return False
 
 
 class CTCProxy:
     input_list = []
     channel = {}
+    remotehost = ''
+    remoteport = ''
+    localhost = ''
+    localport = ''
 
-    def __init__(self, host, port):
+    def __init__(self, host, port, remotehost, remoteport):
+        self.remotehost = remotehost
+        self.remoteport = remoteport
+        self.localhost = '0.0.0.0'
+        self.localport = port
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((host, port))
         self.server.listen(200)
+        print("Proxy started...")
 
-    def main_loop(self):
+    def main_loop(self, buffersize=4096, delay=0.0001):
         self.input_list.append(self.server)
         while 1:
-            time.sleep(settings['delay'])
+            time.sleep(delay)
             ss = select.select
             inputready, outputready, exceptready = ss(self.input_list, [], [])
             for self.s in inputready:
@@ -80,7 +70,7 @@ class CTCProxy:
                     self.on_accept()
                     break
 
-                self.data = self.s.recv(settings['buffer_size'])
+                self.data = self.s.recv(buffersize)
                 if len(self.data) == 0:
                     self.on_close()
                     break
@@ -89,23 +79,23 @@ class CTCProxy:
 
     def on_accept(self):
         forward = Forward().start(
-            settings['remotehost'], settings['remoteport'])
+            self.remotehost, self.remoteport)
         clientsock, clientaddr = self.server.accept()
         if forward:
-            if args.verbose:
-                print clientaddr, "has connected"
+            if verbose:
+                print(clientaddr, "has connected")
             self.input_list.append(clientsock)
             self.input_list.append(forward)
             self.channel[clientsock] = forward
             self.channel[forward] = clientsock
         else:
-            print "Can't establish connection with remote server.",
-            print "Closing connection with client side", clientaddr
+            print("Can't establish connection with remote server.")
+            print("Closing connection with client side", clientaddr)
             clientsock.close()
 
     def on_close(self):
-        if args.verbose:
-            print self.s.getpeername(), "has disconnected"
+        if verbose:
+            print(self.s.getpeername(), "has disconnected")
         # remove objects from input_list
         self.input_list.remove(self.s)
         self.input_list.remove(self.channel[self.s])
@@ -114,25 +104,54 @@ class CTCProxy:
         self.channel[out].close()  # equivalent to do self.s.close()
         # close the connection with remote server
         self.channel[self.s].close()
-        # delete both objects from channel dict
+        # clear the dict
         del self.channel[out]
         del self.channel[self.s]
 
     def on_recv(self):
         data = self.data
         # here we can parse and/or modify the data before send forward
-        if args.debug:
-            print data
+        if debug:
+            print(data)
         self.channel[self.s].send(data)
 
-if __name__ == '__main__':
-    print "::Hello from ctcproxy::"
-    print "> Will proxy to", args.remotehost, "port", settings['remoteport']
-    print "< From", "0.0.0.0", "port", settings['localport']
-    print "--"
-    server = CTCProxy('', settings['localport'])
+
+def get_args(argv=None):
+    global debug
+    global verbose
+    parser = argparse.ArgumentParser(description="Very Lightweight tcp proxy")
+    parser.add_argument('localport', type=int, help="local tcp port")
+    parser.add_argument('remotehost', help="remote hostname")
+    parser.add_argument('remoteport', type=int, help="remote tcp port")
+    parser.add_argument("-v", "--verbose", action='store_true', help="Talks")
+    parser.add_argument("-d", "--debug", action='store_true', help="Debugs")
+    args = parser.parse_args()
+    if args.debug:
+        args.verbose = True
+        debug = True
+    if args.verbose:
+        verbose = True
+    print(TC.OK, "To  ", TC.RST, " > ", args.remotehost,
+          ":", args.remoteport, sep="")
+    print(TC.INF, "From", TC.RST, " < ", "0.0.0.0",
+          ":", args.localport, sep="")
+    return args
+
+
+def main():
+    print(":: Hello from ctcproxy ::")
+    args = get_args(None)
+    print("--")
+    print(debug)
+    print(verbose)
+    proxy = CTCProxy('', args.localport, args.remotehost, args.remoteport)
     try:
-        server.main_loop()
+        proxy.main_loop(8192, 0.000001)
     except KeyboardInterrupt:
-        print "Ctrl C - Stopping server"
+        print("Received SIGINT from Keyboard")
+        print("Stopping proxy...")
         sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
