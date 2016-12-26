@@ -119,7 +119,7 @@ class CTCProxy:
 if __name__ == '__main__':
     print "::Hello from ctcproxy::"
     print "> Will proxy to", args.remotehost, "port", args.remoteport
-    print "< From", "localhost", "port", args.localport
+    print "< From", "0.0.0.0", "port", args.localport
     print "--"
     server = CTCProxy('', args.localport)
     try:
