@@ -13,11 +13,11 @@ parser.add_argument('localport', type=int, help="local tcp port")
 parser.add_argument('remotehost', help="remote hostname")
 parser.add_argument('remoteport', type=int, help="remote tcp port")
 parser.add_argument("-v", "--verbose", action='store_true', help="Be verbose")
+parser.add_argument("-d", "--debug", action='store_true', help="Be Debug")
 args = parser.parse_args()
 
 
-# Changing the buffer_size and delay, you can improve the speed and bandwidth.
-# But when buffer get to high or delay go too down, you can broke things
+# Changing the buffer_size and delay, we can improve the speed and bandwidth.
 buffer_size = 4096
 delay = 0.0001
 forward_to = (args.remotehost, args.remoteport)
@@ -51,7 +51,7 @@ class Forward:
             return False
 
 
-class TheServer:
+class CTCProxy:
     input_list = []
     channel = {}
 
@@ -83,7 +83,8 @@ class TheServer:
         forward = Forward().start(forward_to[0], forward_to[1])
         clientsock, clientaddr = self.server.accept()
         if forward:
-            print clientaddr, "has connected"
+            if args.verbose:
+                print clientaddr, "has connected"
             self.input_list.append(clientsock)
             self.input_list.append(forward)
             self.channel[clientsock] = forward
@@ -94,7 +95,8 @@ class TheServer:
             clientsock.close()
 
     def on_close(self):
-        print self.s.getpeername(), "has disconnected"
+        if args.verbose:
+            print self.s.getpeername(), "has disconnected"
         # remove objects from input_list
         self.input_list.remove(self.s)
         self.input_list.remove(self.channel[self.s])
@@ -110,7 +112,8 @@ class TheServer:
     def on_recv(self):
         data = self.data
         # here we can parse and/or modify the data before send forward
-        # print data
+        if args.debug:
+            print data
         self.channel[self.s].send(data)
 
 if __name__ == '__main__':
@@ -118,7 +121,7 @@ if __name__ == '__main__':
     print "> Will proxy to", args.remotehost, "port", args.remoteport
     print "< From", "localhost", "port", args.localport
     print "--"
-    server = TheServer('', args.localport)
+    server = CTCProxy('', args.localport)
     try:
         server.main_loop()
     except KeyboardInterrupt:
