@@ -1,15 +1,50 @@
 #!/usr/bin/python
+# coding=utf-8
 
 import socket
 import select
 import time
 import sys
+import argparse
+
+
+parser = argparse.ArgumentParser(
+    description="Very Lightweight tcp proxy"
+)
+parser.add_argument('localport', type=int,
+                    help="local tcp port"
+                    )
+parser.add_argument('remotehost',
+                    help="remote hostname"
+                    )
+parser.add_argument("-v", "--verbose", action='store_true',
+                    help="Be verbose"
+                    )
+parser.add_argument('remoteport', type=int,
+                    help="remote tcp port"
+                    )
+args = parser.parse_args()
+
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
 # But when buffer get to high or delay go too down, you can broke things
 buffer_size = 4096
 delay = 0.0001
-forward_to = ('127.0.0.1', 11334)
+forward_to = (args.remotehost, args.remoteport)
+
+
+class TermColors:
+
+    HEAD = '\033[95m'
+    OK = '\033[92m'
+    WARN = '\033[93m'
+    INFO = '\033[93m'
+    FAIL = '\033[91m'
+    REST = '\033[0m'
+    BOLD = '\033[1m'
+    UNDR = '\033[4m'
+
+TC = TermColors
 
 
 class Forward:
@@ -89,7 +124,11 @@ class TheServer:
         self.channel[self.s].send(data)
 
 if __name__ == '__main__':
-    server = TheServer('', 4242)
+    print "::Hello from ctcproxy::"
+    print "> Will proxy to", args.remotehost, "port", args.remoteport
+    print "< From", "localhost", "port", args.localport
+    print "--"
+    server = TheServer('', args.localport)
     try:
         server.main_loop()
     except KeyboardInterrupt:
