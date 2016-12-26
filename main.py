@@ -8,21 +8,11 @@ import sys
 import argparse
 
 
-parser = argparse.ArgumentParser(
-    description="Very Lightweight tcp proxy"
-)
-parser.add_argument('localport', type=int,
-                    help="local tcp port"
-                    )
-parser.add_argument('remotehost',
-                    help="remote hostname"
-                    )
-parser.add_argument("-v", "--verbose", action='store_true',
-                    help="Be verbose"
-                    )
-parser.add_argument('remoteport', type=int,
-                    help="remote tcp port"
-                    )
+parser = argparse.ArgumentParser(description="Very Lightweight tcp proxy")
+parser.add_argument('localport', type=int, help="local tcp port")
+parser.add_argument('remotehost', help="remote hostname")
+parser.add_argument('remoteport', type=int, help="remote tcp port")
+parser.add_argument("-v", "--verbose", action='store_true', help="Be verbose")
 args = parser.parse_args()
 
 
