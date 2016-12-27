@@ -44,8 +44,6 @@ class CustomPrint:
         #print("########################################")
         print("----------------------------------------")
 
-printer = CustomPrint()
-
 
 class Forward:
 
@@ -154,6 +152,9 @@ def get_args(argv=None):
         debug = True
     if args.verbose:
         verbose = True
+    return args
+
+def print_options(args):
     CustomPrint.bar()
     print(' [',TC.BOLD, 'Verbose:',TC.RST, verbose, ' / ', TC.BOLD,
         'Debug:',TC.RST, debug, ']')
@@ -163,13 +164,12 @@ def get_args(argv=None):
           ":", args.localport,TC.RST, "\t ➔ \t",TC.INF, args.remotehost, ':',
           args.remoteport,TC.RST,sep="")
     CustomPrint.bar()
-    return args
-
 
 def main():
     CustomPrint.title()
     args = get_args(None)
-    
+    print_options(args)
+
     proxy = CTCProxy('', args.localport, args.remotehost, args.remoteport)
     try:
         proxy.main_loop(8192, 0.000001)
