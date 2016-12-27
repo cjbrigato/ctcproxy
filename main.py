@@ -92,29 +92,25 @@ class CTCProxy:
         self.proxy.listen(200)
         print("‣ Proxy started...")
 
-    def serve(self, buffersize=4096): #, delay=0.0001):
+    def serve(self, buffersize=4096):
         self.client_queue.append(self.proxy)
-        print(" x buffersize :",buffersize,"bytes")
-        #print(" x delay :",delay,"s")
+        print(" x buffersize :", buffersize, "bytes")
         print("✔ Ready...")
-        while 1:
-            #time.sleep(delay)
+        while True:
             inputready, outputready, exceptready = select.select(
                 self.client_queue, [], [])
             for client in inputready:
                 if client == self.proxy:
-                    self.accept(client)
+                    self.accept()
                     break
-
                 self.data = client.recv(buffersize)
-                #if len(self.data) == 0:
                 if not self.data:
                     self.close(client)
                     break
                 else:
-                    self.recv(client) 
+                    self.recv(client)
 
-    def accept(self,client):
+    def accept(self):
         forward = Forward().start(
             self.remotehost, self.remoteport)
         clientsock, clientaddr = self.proxy.accept()
@@ -129,13 +125,12 @@ class CTCProxy:
             print("ERR:-> Closing connection with client side", clientaddr)
             clientsock.close()
 
-    def recv(self,client):
-        data = self.data
-        printer.debug(data.decode('utf-8'))
+    def recv(self, client):
+        printer.debug(self.data.decode('utf-8'))
         # Right here we can have interception action on data's
-        self.channel_matrix[client].send(data)
+        self.channel_matrix[client].send(self.data)
 
-    def close(self,client):
+    def close(self, client):
         peer = client.getpeername()
         printer.verbiate("C:<-", peer, "left from queue")
         self.client_queue.remove(client)
@@ -145,7 +140,7 @@ class CTCProxy:
         self.channel_matrix[client].close()
         del self.channel_matrix[out]
         del self.channel_matrix[client]
-        printer.verbiate("C:X",peer,"channels cleared")
+        printer.verbiate("C:X", peer, "channels cleared")
 
 
 def get_args(argv=None):
@@ -192,7 +187,7 @@ def main():
 
     proxy = CTCProxy('', args.localport, args.remotehost, args.remoteport)
     try:
-        proxy.serve(8192)#, 0.000001)
+        proxy.serve(8192)
     except KeyboardInterrupt:
         print("Received SIGINT from Keyboard")
         print("Stopping proxy...")
