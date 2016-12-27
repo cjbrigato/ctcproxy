@@ -68,7 +68,7 @@ class Forward:
     def start(self, host, port):
         try:
             self.forward.connect((host, port))
-            printer.verbiate("S-> Connect to:", host, port)
+            printer.verbiate("S:-> Connect to:", host, port)
             return self.forward
         except Exception as e:
             print(e)
@@ -76,6 +76,7 @@ class Forward:
 
 
 class CTCProxy:
+
     client_queue = []
     channel = {}
     remotehost = ''
@@ -96,6 +97,9 @@ class CTCProxy:
 
     def serve(self, buffersize=4096, delay=0.0001):
         self.client_queue.append(self.proxy)
+        print(" x buffersize :",buffersize,"bytes")
+        print(" x delay :",delay,"s")
+        print("✔ Ready...")
         while 1:
             time.sleep(delay)
             ss = select.select
@@ -103,39 +107,41 @@ class CTCProxy:
                 self.client_queue, [], [])
             for self.s in inputready:
                 if self.s == self.proxy:
-                    self.on_accept()
+                    self.accept()
                     break
 
                 self.data = self.s.recv(buffersize)
                 if len(self.data) == 0:
-                    self.on_close()
+                    self.close()
                     break
                 else:
-                    self.on_recv()
+                    self.recv() 
 
-    def on_accept(self):
+
+    def accept(self):
         forward = Forward().start(
             self.remotehost, self.remoteport)
         clientsock, clientaddr = self.proxy.accept()
         if forward:
-            printer.verbiate("C->", clientaddr, "added to queue")
+            printer.verbiate("C:->", clientaddr, "added to queue")
             self.client_queue.append(clientsock)
             self.client_queue.append(forward)
             self.channel[clientsock] = forward
             self.channel[forward] = clientsock
         else:
-            print("ERR: Can't connect to remote !")
-            print("Closing connection with client side", clientaddr)
+            print("ERR:X Can't connect to remote !")
+            print("ERR:-> Closing connection with client side", clientaddr)
             clientsock.close()
 
-    def on_recv(self):
+    def recv(self):
         data = self.data
         printer.debug(data.decode('utf-8'))
         # Right here we can have interception action on data's
         self.channel[self.s].send(data)
 
-    def on_close(self):
-        printer.verbiate("C<-", self.s.getpeername(), "left from queue")
+    def close(self):
+        peer = self.s.getpeername()
+        printer.verbiate("C:<-", self.s.getpeername(), "left from queue")
         self.client_queue.remove(self.s)
         self.client_queue.remove(self.channel[self.s])
         out = self.channel[self.s]
@@ -143,6 +149,7 @@ class CTCProxy:
         self.channel[self.s].close()
         del self.channel[out]
         del self.channel[self.s]
+        printer.verbiate("C:X",peer,"channels destroyed")
 
 
 def get_args(argv=None):
