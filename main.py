@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# coding=utf-8
+#coding=utf-8
 
 from __future__ import print_function
 
@@ -11,6 +11,7 @@ import argparse
 
 verbose = False
 debug = False
+
 
 class TermColors:
 
@@ -25,15 +26,26 @@ class TermColors:
 
 TC = TermColors
 
+
 class CustomPrint:
 
+    @staticmethod
     def title():
-        print("             |")
-        print("  __| __|  __| __ \   __| _ \\ \  / |   |")
-        print("(    |   (    |   | |   (   |`  <  |   |")
-        print("\___|\__|\___| .__/ _|  \___/ _/\_\\__, |")
-        print("              _|                   ____/")
-        print()
+        s = """      _
+  ___| |_ ___ _ __  _ __ _____  ___   _
+ / __| __/ __| '_ \| '__/ _ \ \/ / | | |
+| (__| || (__| |_) | | | (_) >  <| |_| |
+ \___|\__\___| .__/|_|  \___/_/\_\\\__, |
+             |_|                  |___/"""
+        print(TC.WARN,s,TC.RST,sep="")
+
+    @staticmethod
+    def bar():
+        #print("########################################")
+        print("----------------------------------------")
+
+printer = CustomPrint()
+
 
 class Forward:
 
@@ -43,6 +55,8 @@ class Forward:
     def start(self, host, port):
         try:
             self.forward.connect((host, port))
+            if verbose:
+                print("Connect to:",host,port)
             return self.forward
         except Exception as e:
             print(e)
@@ -50,7 +64,7 @@ class Forward:
 
 
 class CTCProxy:
-    input_list = []
+    client_queue = []
     channel = {}
     remotehost = ''
     remoteport = ''
@@ -62,20 +76,20 @@ class CTCProxy:
         self.remoteport = remoteport
         self.localhost = '0.0.0.0'
         self.localport = port
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server.bind((host, port))
-        self.server.listen(200)
-        print("Proxy started...")
+        self.proxy = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.proxy.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.proxy.bind((host, port))
+        self.proxy.listen(200)
+        print("‣ Proxy started...")
 
     def main_loop(self, buffersize=4096, delay=0.0001):
-        self.input_list.append(self.server)
+        self.client_queue.append(self.proxy)
         while 1:
             time.sleep(delay)
             ss = select.select
-            inputready, outputready, exceptready = ss(self.input_list, [], [])
+            inputready, outputready, exceptready = ss(self.client_queue, [], [])
             for self.s in inputready:
-                if self.s == self.server:
+                if self.s == self.proxy:
                     self.on_accept()
                     break
 
@@ -89,12 +103,12 @@ class CTCProxy:
     def on_accept(self):
         forward = Forward().start(
             self.remotehost, self.remoteport)
-        clientsock, clientaddr = self.server.accept()
+        clientsock, clientaddr = self.proxy.accept()
         if forward:
             if verbose:
-                print(clientaddr, "has connected")
-            self.input_list.append(clientsock)
-            self.input_list.append(forward)
+                print("->", clientaddr, "added to queue")
+            self.client_queue.append(clientsock)
+            self.client_queue.append(forward)
             self.channel[clientsock] = forward
             self.channel[forward] = clientsock
         else:
@@ -105,9 +119,9 @@ class CTCProxy:
     def on_close(self):
         if verbose:
             print(self.s.getpeername(), "has disconnected")
-        # remove objects from input_list
-        self.input_list.remove(self.s)
-        self.input_list.remove(self.channel[self.s])
+        # remove objects from client_queue
+        self.client_queue.remove(self.s)
+        self.client_queue.remove(self.channel[self.s])
         out = self.channel[self.s]
         # close the connection with client
         self.channel[out].close()  # equivalent to do self.s.close()
@@ -140,18 +154,22 @@ def get_args(argv=None):
         debug = True
     if args.verbose:
         verbose = True
-    print('[','Verbose:',verbose,'/', 'Debug:',debug,']')
-    print(TC.OK, "To  ", TC.RST, " > ", args.remotehost,
-          ":", args.remoteport, sep="")
-    print(TC.INF, "From", TC.RST, " < ", "0.0.0.0",
-          ":", args.localport, sep="")
+    CustomPrint.bar()
+    print(' [',TC.BOLD, 'Verbose:',TC.RST, verbose, ' / ', TC.BOLD,
+        'Debug:',TC.RST, debug, ']')
+    CustomPrint.bar()
+    print("[LOCAL]\t\t ➔ \t[REMOTE]")
+    print(TC.OK, "0.0.0.0",
+          ":", args.localport,TC.RST, "\t ➔ \t",TC.INF, args.remotehost, ':',
+          args.remoteport,TC.RST,sep="")
+    CustomPrint.bar()
     return args
 
 
 def main():
     CustomPrint.title()
     args = get_args(None)
-    print("--")
+    
     proxy = CTCProxy('', args.localport, args.remotehost, args.remoteport)
     try:
         proxy.main_loop(8192, 0.000001)
