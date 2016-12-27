@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding=utf-8
+# coding=utf-8
 
 from __future__ import print_function
 
@@ -46,6 +46,19 @@ class CustomPrint:
         # print("########################################")
         print("----------------------------------------")
 
+    def debug(self, *args):
+        if debug:
+            if truncate:
+                print(*args[0:100])
+            else:
+                print(*args)
+
+    def verbiate(self, *args):
+        if verbose:
+            print(*args)
+
+printer = CustomPrint()
+
 
 class Forward:
 
@@ -55,8 +68,7 @@ class Forward:
     def start(self, host, port):
         try:
             self.forward.connect((host, port))
-            if verbose:
-                print("S-> Connect to:", host, port)
+            printer.verbiate("S-> Connect to:", host, port)
             return self.forward
         except Exception as e:
             print(e)
@@ -82,7 +94,7 @@ class CTCProxy:
         self.proxy.listen(200)
         print("‣ Proxy started...")
 
-    def main_loop(self, buffersize=4096, delay=0.0001):
+    def serve(self, buffersize=4096, delay=0.0001):
         self.client_queue.append(self.proxy)
         while 1:
             time.sleep(delay)
@@ -106,41 +118,31 @@ class CTCProxy:
             self.remotehost, self.remoteport)
         clientsock, clientaddr = self.proxy.accept()
         if forward:
-            if verbose:
-                print("C->", clientaddr, "added to queue")
+            printer.verbiate("C->", clientaddr, "added to queue")
             self.client_queue.append(clientsock)
             self.client_queue.append(forward)
             self.channel[clientsock] = forward
             self.channel[forward] = clientsock
         else:
-            print("Can't establish connection with remote server.")
+            print("ERR: Can't connect to remote !")
             print("Closing connection with client side", clientaddr)
             clientsock.close()
 
+    def on_recv(self):
+        data = self.data
+        printer.debug(data.decode('utf-8'))
+        # Right here we can have interception action on data's
+        self.channel[self.s].send(data)
+
     def on_close(self):
-        if verbose:
-            print("C<-", self.s.getpeername(), "left from queue")
-        # clean client_queue
+        printer.verbiate("C<-", self.s.getpeername(), "left from queue")
         self.client_queue.remove(self.s)
         self.client_queue.remove(self.channel[self.s])
         out = self.channel[self.s]
-        # close local clientside
         self.channel[out].close()
-        # close remote serverside
         self.channel[self.s].close()
-        # clear theses
         del self.channel[out]
         del self.channel[self.s]
-
-    def on_recv(self):
-        data = self.data
-        if debug:
-            if truncate:
-                print(data.decode('utf-8')[0:100])
-            else:
-                print(data.decode('utf-8'))
-        # Right here we can have interception action on data's
-        self.channel[self.s].send(data)
 
 
 def get_args(argv=None):
@@ -169,25 +171,25 @@ def get_args(argv=None):
 
 
 def print_options(args):
-    CustomPrint.bar()
+    printer.bar()
     print(' [', TC.BOLD, 'Verbose:', TC.RST, verbose, ' / ', TC.BOLD,
           'Debug:', TC.RST, debug, ']')
-    CustomPrint.bar()
+    printer.bar()
     print("[LOCAL]\t\t ➔ \t[REMOTE]")
     print(TC.OK, "0.0.0.0",
           ":", args.localport, TC.RST, "\t ➔ \t", TC.INF, args.remotehost, ':',
           args.remoteport, TC.RST, sep="")
-    CustomPrint.bar()
+    printer.bar()
 
 
 def main():
-    CustomPrint.title()
+    printer.title()
     args = get_args(None)
     print_options(args)
 
     proxy = CTCProxy('', args.localport, args.remotehost, args.remoteport)
     try:
-        proxy.main_loop(8192, 0.000001)
+        proxy.serve(8192, 0.000001)
     except KeyboardInterrupt:
         print("Received SIGINT from Keyboard")
         print("Stopping proxy...")
