@@ -39,11 +39,11 @@ class CustomPrint:
 | (__| || (__| |_) | | | (_) >  <| |_| |
  \___|\__\___| .__/|_|  \___/_/\_\\\__, |
              |_|                  |___/"""
-        print(TC.WARN,s,TC.RST,sep="")
+        print(TC.WARN, s, TC.RST, sep="")
 
     @staticmethod
     def bar():
-        #print("########################################")
+        # print("########################################")
         print("----------------------------------------")
 
 
@@ -56,7 +56,7 @@ class Forward:
         try:
             self.forward.connect((host, port))
             if verbose:
-                print("S-> Connect to:",host,port)
+                print("S-> Connect to:", host, port)
             return self.forward
         except Exception as e:
             print(e)
@@ -87,7 +87,8 @@ class CTCProxy:
         while 1:
             time.sleep(delay)
             ss = select.select
-            inputready, outputready, exceptready = ss(self.client_queue, [], [])
+            inputready, outputready, exceptready = ss(
+                self.client_queue, [], [])
             for self.s in inputready:
                 if self.s == self.proxy:
                     self.on_accept()
@@ -169,14 +170,15 @@ def get_args(argv=None):
 
 def print_options(args):
     CustomPrint.bar()
-    print(' [',TC.BOLD, 'Verbose:',TC.RST, verbose, ' / ', TC.BOLD,
-        'Debug:',TC.RST, debug, ']')
+    print(' [', TC.BOLD, 'Verbose:', TC.RST, verbose, ' / ', TC.BOLD,
+          'Debug:', TC.RST, debug, ']')
     CustomPrint.bar()
     print("[LOCAL]\t\t ➔ \t[REMOTE]")
     print(TC.OK, "0.0.0.0",
-          ":", args.localport,TC.RST, "\t ➔ \t",TC.INF, args.remotehost, ':',
-          args.remoteport,TC.RST,sep="")
+          ":", args.localport, TC.RST, "\t ➔ \t", TC.INF, args.remotehost, ':',
+          args.remoteport, TC.RST, sep="")
     CustomPrint.bar()
+
 
 def main():
     CustomPrint.title()
