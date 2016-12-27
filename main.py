@@ -79,14 +79,9 @@ class Forward:
 
 class CTCProxy:
 
-    client_queue = []
-    channel_matrix = {}
-    remotehost = ''
-    remoteport = ''
-    localhost = ''
-    localport = ''
-
     def __init__(self, host, port, remotehost, remoteport):
+        self.client_queue = []
+        self.channel_matrix = {}
         self.remotehost = remotehost
         self.remoteport = remoteport
         self.localhost = '0.0.0.0'
@@ -97,15 +92,14 @@ class CTCProxy:
         self.proxy.listen(200)
         print("‣ Proxy started...")
 
-    def serve(self, buffersize=4096, delay=0.0001):
+    def serve(self, buffersize=4096): #, delay=0.0001):
         self.client_queue.append(self.proxy)
         print(" x buffersize :",buffersize,"bytes")
-        print(" x delay :",delay,"s")
+        #print(" x delay :",delay,"s")
         print("✔ Ready...")
         while 1:
-            time.sleep(delay)
-            ss = select.select
-            inputready, outputready, exceptready = ss(
+            #time.sleep(delay)
+            inputready, outputready, exceptready = select.select(
                 self.client_queue, [], [])
             for self.s in inputready:
                 if self.s == self.proxy:
@@ -113,12 +107,12 @@ class CTCProxy:
                     break
 
                 self.data = self.s.recv(buffersize)
-                if len(self.data) == 0:
+                #if len(self.data) == 0:
+                if not self.data:
                     self.close()
                     break
                 else:
                     self.recv() 
-
 
     def accept(self):
         forward = Forward().start(
@@ -198,7 +192,7 @@ def main():
 
     proxy = CTCProxy('', args.localport, args.remotehost, args.remoteport)
     try:
-        proxy.serve(8192, 0.000001)
+        proxy.serve(8192)#, 0.000001)
     except KeyboardInterrupt:
         print("Received SIGINT from Keyboard")
         print("Stopping proxy...")
