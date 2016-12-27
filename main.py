@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3.6
 # coding=utf-8
 
 from __future__ import print_function
@@ -46,6 +46,7 @@ class CustomPrint:
         # print("########################################")
         print("----------------------------------------")
 
+    #@staticmethod
     def debug(self, *args):
         if debug:
             if truncate:
@@ -53,6 +54,7 @@ class CustomPrint:
             else:
                 print(*args)
 
+    #@staticmethod
     def verbiate(self, *args):
         if verbose:
             print(*args)
@@ -78,7 +80,7 @@ class Forward:
 class CTCProxy:
 
     client_queue = []
-    channel = {}
+    channel_matrix = {}
     remotehost = ''
     remoteport = ''
     localhost = ''
@@ -126,8 +128,8 @@ class CTCProxy:
             printer.verbiate("C:->", clientaddr, "added to queue")
             self.client_queue.append(clientsock)
             self.client_queue.append(forward)
-            self.channel[clientsock] = forward
-            self.channel[forward] = clientsock
+            self.channel_matrix[clientsock] = forward
+            self.channel_matrix[forward] = clientsock
         else:
             print("ERR:X Can't connect to remote !")
             print("ERR:-> Closing connection with client side", clientaddr)
@@ -137,19 +139,19 @@ class CTCProxy:
         data = self.data
         printer.debug(data.decode('utf-8'))
         # Right here we can have interception action on data's
-        self.channel[self.s].send(data)
+        self.channel_matrix[self.s].send(data)
 
     def close(self):
         peer = self.s.getpeername()
         printer.verbiate("C:<-", self.s.getpeername(), "left from queue")
         self.client_queue.remove(self.s)
-        self.client_queue.remove(self.channel[self.s])
-        out = self.channel[self.s]
-        self.channel[out].close()
-        self.channel[self.s].close()
-        del self.channel[out]
-        del self.channel[self.s]
-        printer.verbiate("C:X",peer,"channels destroyed")
+        self.client_queue.remove(self.channel_matrix[self.s])
+        out = self.channel_matrix[self.s]
+        self.channel_matrix[out].close()
+        self.channel_matrix[self.s].close()
+        del self.channel_matrix[out]
+        del self.channel_matrix[self.s]
+        printer.verbiate("C:X",peer,"channels cleared")
 
 
 def get_args(argv=None):
