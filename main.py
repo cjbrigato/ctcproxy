@@ -101,20 +101,20 @@ class CTCProxy:
             #time.sleep(delay)
             inputready, outputready, exceptready = select.select(
                 self.client_queue, [], [])
-            for self.s in inputready:
-                if self.s == self.proxy:
-                    self.accept()
+            for client in inputready:
+                if client == self.proxy:
+                    self.accept(client)
                     break
 
-                self.data = self.s.recv(buffersize)
+                self.data = client.recv(buffersize)
                 #if len(self.data) == 0:
                 if not self.data:
-                    self.close()
+                    self.close(client)
                     break
                 else:
-                    self.recv() 
+                    self.recv(client) 
 
-    def accept(self):
+    def accept(self,client):
         forward = Forward().start(
             self.remotehost, self.remoteport)
         clientsock, clientaddr = self.proxy.accept()
@@ -129,22 +129,22 @@ class CTCProxy:
             print("ERR:-> Closing connection with client side", clientaddr)
             clientsock.close()
 
-    def recv(self):
+    def recv(self,client):
         data = self.data
         printer.debug(data.decode('utf-8'))
         # Right here we can have interception action on data's
-        self.channel_matrix[self.s].send(data)
+        self.channel_matrix[client].send(data)
 
-    def close(self):
-        peer = self.s.getpeername()
-        printer.verbiate("C:<-", self.s.getpeername(), "left from queue")
-        self.client_queue.remove(self.s)
-        self.client_queue.remove(self.channel_matrix[self.s])
-        out = self.channel_matrix[self.s]
+    def close(self,client):
+        peer = client.getpeername()
+        printer.verbiate("C:<-", peer, "left from queue")
+        self.client_queue.remove(client)
+        self.client_queue.remove(self.channel_matrix[client])
+        out = self.channel_matrix[client]
         self.channel_matrix[out].close()
-        self.channel_matrix[self.s].close()
+        self.channel_matrix[client].close()
         del self.channel_matrix[out]
-        del self.channel_matrix[self.s]
+        del self.channel_matrix[client]
         printer.verbiate("C:X",peer,"channels cleared")
 
 
