@@ -7,10 +7,12 @@ import socket
 import select
 import time
 import sys
+import re
 import argparse
 
 verbose = False
 debug = False
+truncate = False
 
 
 class TermColors:
@@ -54,7 +56,7 @@ class Forward:
         try:
             self.forward.connect((host, port))
             if verbose:
-                print("Connect to:",host,port)
+                print("S-> Connect to:",host,port)
             return self.forward
         except Exception as e:
             print(e)
@@ -104,7 +106,7 @@ class CTCProxy:
         clientsock, clientaddr = self.proxy.accept()
         if forward:
             if verbose:
-                print("->", clientaddr, "added to queue")
+                print("C->", clientaddr, "added to queue")
             self.client_queue.append(clientsock)
             self.client_queue.append(forward)
             self.channel[clientsock] = forward
@@ -116,43 +118,54 @@ class CTCProxy:
 
     def on_close(self):
         if verbose:
-            print(self.s.getpeername(), "has disconnected")
-        # remove objects from client_queue
+            print("C<-", self.s.getpeername(), "left from queue")
+        # clean client_queue
         self.client_queue.remove(self.s)
         self.client_queue.remove(self.channel[self.s])
         out = self.channel[self.s]
-        # close the connection with client
-        self.channel[out].close()  # equivalent to do self.s.close()
-        # close the connection with remote server
+        # close local clientside
+        self.channel[out].close()
+        # close remote serverside
         self.channel[self.s].close()
-        # clear the dict
+        # clear theses
         del self.channel[out]
         del self.channel[self.s]
 
     def on_recv(self):
         data = self.data
-        # here we can parse and/or modify the data before send forward
         if debug:
-            print(data)
+            if truncate:
+                print(data.decode('utf-8')[0:100])
+            else:
+                print(data.decode('utf-8'))
+        # Right here we can have interception action on data's
         self.channel[self.s].send(data)
 
 
 def get_args(argv=None):
+
     global debug
     global verbose
+    global truncate
+
     parser = argparse.ArgumentParser(description="Very Lightweight tcp proxy")
     parser.add_argument('localport', type=int, help="local tcp port")
     parser.add_argument('remotehost', help="remote hostname")
     parser.add_argument('remoteport', type=int, help="remote tcp port")
     parser.add_argument("-v", "--verbose", action='store_true', help="Talks")
     parser.add_argument("-d", "--debug", action='store_true', help="Debugs")
+    parser.add_argument("-t", "--truncate", action='store_true', help="Limits")
+
     args = parser.parse_args()
     if args.debug:
         args.verbose = True
         debug = True
+        if args.truncate:
+            truncate = True
     if args.verbose:
         verbose = True
     return args
+
 
 def print_options(args):
     CustomPrint.bar()
