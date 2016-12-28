@@ -59,6 +59,13 @@ class CustomPrint:
     def ina3_passed(self, *args):
         print(TC.OK, "‣ ", TC.RST, *args, sep="")
 
+    def decode_and_debug(*args):
+        if debug:
+            if truncate:
+                print(*args.decode()[0:100])
+            else:
+                print(*args)
+
     #@staticmethod
     def debug(self, *args):
         if debug:
@@ -143,7 +150,7 @@ class CTCProxy:
     def recv(self, client):
         # forcing utf-8 decoding has maltendancies upon bad settled locales
         # printer.debug(self.data.decode('utf-8'))
-        printer.debug(self.data.decode())
+        printer.debug(self.data)
         # Right here we can have interception action on data's
         self.channel_matrix[client].send(self.data)
 
