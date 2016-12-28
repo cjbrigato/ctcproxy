@@ -141,7 +141,9 @@ class CTCProxy:
             clientsock.close()
 
     def recv(self, client):
-        printer.debug(self.data.decode('utf-8'))
+        # forcing utf-8 decoding has maltendancies upon bad settled locales
+        # printer.debug(self.data.decode('utf-8'))
+        printer.debug(self.data.decode())
         # Right here we can have interception action on data's
         self.channel_matrix[client].send(self.data)
 
