@@ -64,7 +64,7 @@ class CustomPrint:
             if truncate:
                 print(*args.decode()[0:100])
             else:
-                print(*args.decdode())
+                print(*args.decode())
 
     #@staticmethod
     def debug(self, *args):
