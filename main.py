@@ -20,8 +20,9 @@ class TermColors:
     HEAD = '\033[95m'
     OK = '\033[92m'
     WARN = '\033[93m'
-    INF = '\033[93m'
+    INF = WARN
     FAIL = '\033[91m'
+    RED = FAIL
     RST = '\033[0m'
     BOLD = '\033[1m'
     UNDR = '\033[4m'
@@ -45,6 +46,18 @@ class CustomPrint:
     def bar():
         # print("########################################")
         print("----------------------------------------")
+
+    def critical(self, *args):
+        print(TC.FAIL, "☓  ", TC.RST, *args, sep="")
+
+    def info(self, *args):
+        print(TC.WARN, "ⅈ ", TC.RST, *args, sep="")
+
+    def inb4_critical(self, *args):
+        print(TC.RED, "‣ ", TC.RST, *args, sep="")
+
+    def ina3_passed(self, *args):
+        print(TC.OK, "‣ ", TC.RST, *args, sep="")
 
     #@staticmethod
     def debug(self, *args):
@@ -90,12 +103,14 @@ class CTCProxy:
         self.proxy.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.proxy.bind((host, port))
         self.proxy.listen(200)
-        print("‣ Proxy started...")
+        printer.inb4_critical("Proxy started...")
 
     def serve(self, buffersize=4096):
         self.client_queue.append(self.proxy)
-        print(" x buffersize :", buffersize, "bytes")
-        print("✔ Ready...")
+        print("  ↳  buffersize :", buffersize, "bytes")
+        print("  ↳  Ready", TC.OK, "✔", TC.RST)
+        printer.ina3_passed("Operating...")
+
         while True:
             inputready, outputready, exceptready = select.select(
                 self.client_queue, [], [])
@@ -121,8 +136,8 @@ class CTCProxy:
             self.channel_matrix[clientsock] = forward
             self.channel_matrix[forward] = clientsock
         else:
-            print("ERR:X Can't connect to remote !")
-            print("ERR:-> Closing connection with client side", clientaddr)
+            print("✗ Can't connect to remote !")
+            print("  ↳  Closing connection with client side", clientaddr)
             clientsock.close()
 
     def recv(self, client):
@@ -189,8 +204,9 @@ def main():
     try:
         proxy.serve(8192)
     except KeyboardInterrupt:
-        print("Received SIGINT from Keyboard")
-        print("Stopping proxy...")
+        print()
+        printer.critical("Received SIGINT from Keyboard")
+        print("  ↳  Stopping proxy...")
         sys.exit(1)
 
 
